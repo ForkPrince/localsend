@@ -2,7 +2,7 @@ mod store;
 
 pub use store::{
     ChannelStatus, DeviceChannel, DeviceLog, DeviceLogKind, DiscoveredDevice, HttpChannel,
-    StatefulDevice,
+    RelayChannel, StatefulDevice,
 };
 
 use crate::http::client::{ClientError, LsHttpClientV2};
@@ -474,5 +474,30 @@ fn confirmed_device(
             protocol,
         }),
         download: response.download,
+    }
+}
+
+/// Builds the stored device from a peer announced by a relay backend. The
+/// fingerprint is the device's announced fingerprint (in HTTPS mode the hash
+/// of its certificate, used to pin the connection over the relay).
+#[cfg(feature = "relay")]
+pub fn confirmed_relay_device(
+    info: crate::relay::RelayDeviceInfo,
+    backend: String,
+    room: String,
+    peer_id: String,
+) -> DiscoveredDevice {
+    DiscoveredDevice {
+        alias: info.alias,
+        version: info.version,
+        device_model: info.device_model,
+        device_type: info.device_type,
+        fingerprint: info.fingerprint,
+        channel: DeviceChannel::Relay(RelayChannel {
+            backend,
+            room,
+            peer_id,
+        }),
+        download: info.download,
     }
 }

@@ -360,7 +360,7 @@ impl RsDiscovery {
         self.instance
             .handle
             .device_by_fingerprint(&fingerprint)
-            .map(|stored| stored.logs.into_iter().map(rs_device_log).collect())
+            .map(|stored| stored.logs.into_iter().filter_map(rs_device_log).collect())
             .unwrap_or_default()
     }
 
@@ -379,21 +379,26 @@ impl RsDiscovery {
     }
 }
 
-fn rs_device_log(log: DeviceLog) -> RsDeviceLog {
-    let DeviceChannel::Http(http) = log.channel;
-    RsDeviceLog {
+fn rs_device_log(log: DeviceLog) -> Option<RsDeviceLog> {
+    // Relay channels are not surfaced to the app until sending through a
+    // backend lands; a relay confirmation has no HTTP address to present.
+    let channel = match log.channel {
+        DeviceChannel::Http(http) => RsDeviceChannel {
+            host: http.host,
+            port: http.port,
+            protocol: http.protocol,
+        },
+        DeviceChannel::Relay(_) => return None,
+    };
+    Some(RsDeviceLog {
         timestamp_millis: log
             .timestamp
             .duration_since(std::time::UNIX_EPOCH)
             .map(|elapsed| elapsed.as_millis() as u64)
             .unwrap_or(0),
         kind: log.kind,
-        channel: RsDeviceChannel {
-            host: http.host,
-            port: http.port,
-            protocol: http.protocol,
-        },
-    }
+        channel,
+    })
 }
 
 /// The merged stored device flattened for the Dart side, its channels ranked
@@ -402,13 +407,17 @@ fn rs_stored_device(stored: StatefulDevice) -> RsStoredDevice {
     let channels = stored
         .get_ranked_channels()
         .into_iter()
-        .map(|channel| {
-            let DeviceChannel::Http(http) = channel;
-            RsDeviceChannel {
-                host: http.host.clone(),
-                port: http.port,
-                protocol: http.protocol,
-            }
+        .filter_map(|channel| {
+            // See `rs_device_log`: relay channels are not surfaced yet.
+            let channel = match channel {
+                DeviceChannel::Http(http) => RsDeviceChannel {
+                    host: http.host.clone(),
+                    port: http.port,
+                    protocol: http.protocol,
+                },
+                DeviceChannel::Relay(_) => return None,
+            };
+            Some(channel)
         })
         .collect();
 

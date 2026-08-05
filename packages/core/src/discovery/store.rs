@@ -99,6 +99,7 @@ impl StatefulDevice {
         channels.sort_by_key(|(channel, status)| {
             std::cmp::Reverse((
                 **status == ChannelStatus::Available,
+                channel.priority(),
                 channel.is_ipv6(),
                 self.last_confirmed(channel),
             ))
@@ -121,13 +122,14 @@ impl DiscoveredDevice {
 }
 
 /// A channel a device is reachable on.
-///
-/// Only HTTP exists so far; other transports (e.g. WebRTC, Bluetooth) will
-/// become further variants.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum DeviceChannel {
     /// The device's HTTP server (protocol v2), reachable at one address.
     Http(HttpChannel),
+
+    /// The device is reachable through a relay backend, in the room derived
+    /// from the shared room secret.
+    Relay(RelayChannel),
 }
 
 impl DeviceChannel {
@@ -135,6 +137,7 @@ impl DeviceChannel {
     pub fn http(&self) -> Option<&HttpChannel> {
         match self {
             DeviceChannel::Http(http) => Some(http),
+            DeviceChannel::Relay(_) => None,
         }
     }
 
@@ -143,6 +146,10 @@ impl DeviceChannel {
     fn same_endpoint(&self, other: &DeviceChannel) -> bool {
         match (self, other) {
             (DeviceChannel::Http(own), DeviceChannel::Http(other)) => own.host == other.host,
+            (DeviceChannel::Relay(own), DeviceChannel::Relay(other)) => {
+                own.backend == other.backend && own.room == other.room && own.peer_id == other.peer_id
+            }
+            _ => false,
         }
     }
 
@@ -154,6 +161,16 @@ impl DeviceChannel {
                 let host = http.host.split('%').next().unwrap_or(&http.host);
                 matches!(host.parse::<IpAddr>(), Ok(IpAddr::V6(_)))
             }
+            DeviceChannel::Relay(_) => false,
+        }
+    }
+
+    /// The preference of the channel: HTTP beats relay, so a LAN connection is
+    /// always tried before sending through the backend.
+    fn priority(&self) -> u8 {
+        match self {
+            DeviceChannel::Http(_) => 1,
+            DeviceChannel::Relay(_) => 0,
         }
     }
 }
@@ -170,6 +187,19 @@ pub struct HttpChannel {
 
     /// Whether the HTTP server uses TLS.
     pub protocol: ProtocolType,
+}
+
+/// A device reachable through a relay backend.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct RelayChannel {
+    /// The backend URL the device is registered with.
+    pub backend: String,
+
+    /// The room key (see `crate::relay::room_key`) the device is in.
+    pub room: String,
+
+    /// The ID the backend assigned to the device.
+    pub peer_id: String,
 }
 
 /// All devices discovered in this run, identified by fingerprint, in
@@ -282,6 +312,22 @@ mod tests {
         channel.http().unwrap().host.as_str()
     }
 
+    fn relay_device(fingerprint: &str, backend: &str, room: &str, peer_id: &str) -> DiscoveredDevice {
+        DiscoveredDevice {
+            alias: format!("Relay of {fingerprint}"),
+            version: "2.1".to_string(),
+            device_model: None,
+            device_type: Some(DeviceType::Desktop),
+            fingerprint: fingerprint.to_string(),
+            channel: DeviceChannel::Relay(RelayChannel {
+                backend: backend.to_string(),
+                room: room.to_string(),
+                peer_id: peer_id.to_string(),
+            }),
+            download: false,
+        }
+    }
+
     /// The marker telling log entries apart: the host the confirmation
     /// happened on.
     fn log_marker(log: &DeviceLog) -> &str {
@@ -373,6 +419,7 @@ mod tests {
         let mut update = device("a", "192.168.0.10");
         match &mut update.channel {
             DeviceChannel::Http(http) => http.port = 54000,
+            DeviceChannel::Relay(_) => unreachable!(),
         }
         store.upsert(update, SystemTime::now());
 
@@ -444,6 +491,43 @@ mod tests {
             "192.168.0.10",
             "an available IPv4 channel must beat a not-reachable IPv6 one"
         );
+    }
+
+    #[test]
+    fn test_relay_channel_ranks_after_http() {
+        let store = DeviceStore::new();
+
+        store.upsert(
+            relay_device("a", "relay.example", "abc", "peer1"),
+            SystemTime::now(),
+        );
+        store.upsert(device("a", "192.168.0.10"), SystemTime::now());
+
+        let known = store.by_fingerprint("a").unwrap();
+        let ranked: Vec<bool> = known
+            .get_ranked_channels()
+            .into_iter()
+            .map(|channel| matches!(channel, DeviceChannel::Relay(_)))
+            .collect();
+        assert_eq!(ranked, [false, true], "HTTP must be ranked above relay");
+    }
+
+    #[test]
+    fn test_relay_channel_replaces_same_endpoint() {
+        let store = DeviceStore::new();
+
+        store.upsert(
+            relay_device("a", "relay.example.com", "abc", "peer1"),
+            SystemTime::now(),
+        );
+        store.upsert(
+            relay_device("a", "relay.example.com", "abc", "peer1"),
+            SystemTime::now(),
+        );
+
+        let known = store.by_fingerprint("a").unwrap();
+        assert_eq!(known.channels.len(), 1, "a known relay endpoint must not duplicate");
+        assert_eq!(known.logs.len(), 2, "each confirmation must still be logged");
     }
 
     #[test]

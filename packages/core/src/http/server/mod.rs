@@ -152,6 +152,14 @@ pub struct ServerHandle {
     /// requested, the listeners have been dropped and all connections have
     /// been closed.
     task: Mutex<Option<tokio::task::JoinHandle<()>>>,
+
+    /// The application state connections are served with, kept for serving
+    /// connections that arrive through the relay backend.
+    app_state: AppState,
+
+    /// The TLS acceptor connections are served with, kept for serving
+    /// connections that arrive through the relay backend.
+    tls_acceptor: Option<tokio_rustls::TlsAcceptor>,
 }
 
 impl ServerHandle {
@@ -193,6 +201,22 @@ impl ServerHandle {
         }
     }
 
+    /// Serves a connection that arrived through the relay backend (see
+    /// `crate::relay`), exactly like a regular TCP connection accepted by the
+    /// listeners. The peer identity is read from the TLS handshake, so
+    /// `remote_addr` is only used for display.
+    pub fn serve_relay(
+        &self,
+        stream: impl tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin + Send + 'static,
+        remote_addr: SocketAddr,
+    ) {
+        let app_state = self.app_state.clone();
+        let tls_acceptor = self.tls_acceptor.clone();
+        tokio::spawn(async move {
+            serve_connection(stream, remote_addr, tls_acceptor, app_state).await;
+        });
+    }
+
     /// Cancels the active v2 upload session if it matches `session_id`,
     /// e.g. because the user aborted the transfer on the receiving side.
     ///
@@ -231,6 +255,18 @@ pub async fn start_with_port(
     let info = Arc::new(Mutex::new(info));
     let state = AppState::new(info.clone(), internal_config, v2_config, web_config);
 
+    // Browsers have no client certificate, so presenting one is optional while
+    // the web pages are served. A certificate that is presented is still verified.
+    let mandatory_client_auth = state.web.is_none() && !state.web_upload;
+    let tls_acceptor = match tls_config {
+        Some(tls_config) => Some(
+            create_tls_config(&tls_config, mandatory_client_auth).inspect_err(|err| {
+                tracing::error!("failed to create tls config: {err:#}");
+            })?,
+        ),
+        None => None,
+    };
+
     let ipv4_listener = tokio::net::TcpListener::bind(ipv4_socket_addr).await?;
     // With port 0, the IPv6 listener must reuse the port the IPv4 listener got.
     let bound_port = ipv4_listener.local_addr()?.port();
@@ -251,14 +287,15 @@ pub async fn start_with_port(
         let state = state.clone();
         let cancel = cancel.clone();
         let connections = connections.clone();
+        let tls_acceptor = tls_acceptor.clone();
         async move {
             tokio::select! {
-                _ = start_server_with_listener(ipv4_listener, tls_config.clone(), state.clone(), cancel.clone(), connections.clone()) => {
+                _ = start_server_with_listener(ipv4_listener, tls_acceptor.clone(), state.clone(), cancel.clone(), connections.clone()) => {
                     tracing::info!("Server stopped on: {}", ipv4_socket_addr);
                 }
                 _ = async {
                     if let Some(listener) = ipv6_listener {
-                        let _ = start_server_with_listener(listener, tls_config, state, cancel.clone(), connections.clone()).await;
+                        let _ = start_server_with_listener(listener, tls_acceptor, state, cancel.clone(), connections.clone()).await;
                     }
 
                     // Keep the future running forever, so we continue using "ipv4 only" even if ipv6 fails.
@@ -280,6 +317,8 @@ pub async fn start_with_port(
         port: bound_port,
         ipv6_bound,
         task: Mutex::new(Some(task)),
+        app_state: state,
+        tls_acceptor,
     })
 }
 
@@ -310,25 +349,12 @@ pub struct TlsConfig {
 
 async fn start_server_with_listener(
     incoming: tokio::net::TcpListener,
-    tls_config: Option<TlsConfig>,
+    tls_acceptor: Option<tokio_rustls::TlsAcceptor>,
     app_state: AppState,
     cancel: CancellationToken,
     connections: TaskTracker,
 ) -> anyhow::Result<()> {
     let _ = rustls::crypto::ring::default_provider().install_default();
-
-    // Browsers have no client certificate, so presenting one is optional while
-    // the web pages are served. A certificate that is presented is still verified.
-    let mandatory_client_auth = app_state.web.is_none() && !app_state.web_upload;
-
-    let tls_acceptor = match tls_config {
-        Some(tls_config) => Some(
-            create_tls_config(&tls_config, mandatory_client_auth).inspect_err(|err| {
-                tracing::error!("failed to create tls config: {err:#}");
-            })?,
-        ),
-        None => None,
-    };
 
     tracing::info!(
         "Started server on {} (TLS: {})",
@@ -354,14 +380,14 @@ async fn start_server_with_listener(
 }
 
 async fn serve_connection(
-    tcp_stream: tokio::net::TcpStream,
+    stream: impl tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin + Send + 'static,
     remote_addr: SocketAddr,
     tls_acceptor: Option<tokio_rustls::TlsAcceptor>,
     app_state: AppState,
 ) {
     let res = match tls_acceptor {
         Some(tls_acceptor) => {
-            let tls_stream = match tls_acceptor.accept(tcp_stream).await {
+            let tls_stream = match tls_acceptor.accept(stream).await {
                 Ok(tls_stream) => tls_stream,
                 Err(err) => {
                     tracing::warn!("TLS handshake error: {err:#}");
@@ -398,7 +424,7 @@ async fn serve_connection(
         None => {
             Builder::new(TokioExecutor::new())
                 .serve_connection(
-                    TokioIo::new(tcp_stream),
+                    TokioIo::new(stream),
                     hyper::service::service_fn(move |mut req: Request<Incoming>| {
                         req.extensions_mut()
                             .insert::<RequestClientInfo>(RequestClientInfo {
