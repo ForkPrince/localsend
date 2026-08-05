@@ -1,4 +1,7 @@
+use axum::http::HeaderMap;
 use std::net::IpAddr;
+use std::net::SocketAddr;
+use std::str::FromStr;
 
 pub(crate) fn get_ip_group(ip: IpAddr) -> String {
     match ip {
@@ -15,6 +18,18 @@ pub(crate) fn get_ip_group(ip: IpAddr) -> String {
             )
         }
     }
+}
+
+/// The real client IP: prefer the `x-forwarded-for` value (the last hop, which
+/// a trusted proxy appended), falling back to the socket address.
+pub(crate) fn client_ip(headers: &HeaderMap, addr: &SocketAddr) -> IpAddr {
+    headers
+        .get("x-forwarded-for")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.split(',').last()) // Get the last component
+        .map(|v| v.trim().to_string())
+        .and_then(|v| IpAddr::from_str(&v).ok())
+        .unwrap_or(addr.ip())
 }
 
 #[cfg(test)]

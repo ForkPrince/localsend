@@ -47,7 +47,7 @@ required-features = ["http"]
 
 [features]
 default = []
-crypto = ["ed25519-dalek", "rcgen", "rsa", "sha2", "tokio-util"]
+crypto = ["ed25519-dalek", "pem", "rcgen", "rsa", "sha2", "tokio-util", "x509-parser"]
 discovery = ["http", "multicast"]
 http = ["crypto", "form_urlencoded", "http-body-util", "hyper", "hyper-util", "if-addrs", "pem", "percent-encoding", "reqwest", "rustls", "socket2", "time", "tokio-rustls", "tokio-util", "x509-parser"]
 multicast = ["if-addrs", "socket2", "tokio-util"]

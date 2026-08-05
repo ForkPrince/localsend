@@ -1,7 +1,7 @@
 use crate::config::error::AppError;
 use crate::config::state::{AppState, ClientState, IpRequestCountMap, TxMap};
 use crate::util;
-use crate::util::ip::get_ip_group;
+use crate::util::ip::{client_ip, get_ip_group};
 use axum::body::Body;
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{ConnectInfo, Query, State, WebSocketUpgrade};
@@ -15,8 +15,7 @@ use localsend::webrtc::signaling::{
 };
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::net::{IpAddr, SocketAddr};
-use std::str::FromStr;
+use std::net::SocketAddr;
 use std::sync::LazyLock;
 use tokio::sync::mpsc;
 use uuid::Uuid;
@@ -25,13 +24,6 @@ static MAX_CONNECTIONS: LazyLock<usize> = LazyLock::new(|| {
     std::env::var("MAX_CONNECTIONS_PER_IP")
         .unwrap_or_else(|_| "10".to_string())
         .parse::<usize>()
-        .unwrap()
-});
-
-static MAX_REQUESTS: LazyLock<u32> = LazyLock::new(|| {
-    std::env::var("MAX_REQUESTS_PER_IP_PER_HOUR")
-        .unwrap_or_else(|_| "1000".to_string())
-        .parse::<u32>()
         .unwrap()
 });
 
@@ -61,24 +53,14 @@ pub async fn ws_handler(
         ClientInfo::from(register_dto.clone(), Uuid::new_v4())
     };
 
-    let ip = {
-        // Prefer the forwarded IP if available.
-        let raw_forwarded = headers
-            .get("x-forwarded-for")
-            .and_then(|v| v.to_str().ok())
-            .and_then(|v| v.split(',').last()) // Get the last component
-            .map(|v| v.trim().to_string())
-            .and_then(|v| IpAddr::from_str(&v).ok());
-
-        raw_forwarded.unwrap_or(addr.ip())
-    };
+    let ip_group = get_ip_group(client_ip(&headers, &addr));
 
     Ok(ws.on_upgrade(move |socket| {
         handle_socket(
             state.tx_map,
             state.request_count_map,
             socket,
-            get_ip_group(ip),
+            ip_group,
             peer_info,
         )
     }))
@@ -114,7 +96,7 @@ async fn handle_socket(
                 break 'lock;
             }
 
-            if protect_ddos_request_count(&request_count_map, &ip_group)
+            if crate::util::limit::rate_limit(&ip_group, &request_count_map)
                 .await
                 .is_err()
             {
@@ -182,7 +164,7 @@ async fn handle_socket(
         while let Some(Ok(msg)) = receiver.next().await {
             if let Message::Text(text) = msg {
                 if let Ok(msg) = serde_json::from_str::<WsClientMessage>(&text) {
-                    if protect_ddos_request_count(&request_count_map, &ip_group_clone)
+                    if crate::util::limit::rate_limit(&ip_group_clone, &request_count_map)
                         .await
                         .is_err()
                     {
@@ -353,17 +335,4 @@ async fn send_to_peer_with_lock(
 
         let _ = tx.send(server_message).await;
     }
-}
-
-async fn protect_ddos_request_count(
-    request_count_map: &IpRequestCountMap,
-    ip_group: &str,
-) -> Result<(), AppError> {
-    let mut request_count_map = request_count_map.lock().await;
-    let count = request_count_map.entry(ip_group.to_string()).or_insert(0);
-    if *count >= *MAX_REQUESTS {
-        return Err(AppError::status(StatusCode::TOO_MANY_REQUESTS, None));
-    }
-    *count += 1;
-    Ok(())
 }

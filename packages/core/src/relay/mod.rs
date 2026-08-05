@@ -30,6 +30,7 @@ mod pipe;
 
 pub use client::{RelayClient, RelayEvent};
 pub use messages::{
-    room_key, RelayClientMessage, RelayDeviceInfo, RelayPeer, RelayServerMessage,
+    decode_data, encode_data, room_key, RelayClientMessage, RelayDeviceInfo, RelayPeer,
+    RelayServerMessage,
 };
 pub use pipe::RelayPipe;
