@@ -9,11 +9,18 @@ export 'package:localsend_isolates/src/isolate/child/server_isolate.dart'
         HttpServerPrepareUploadEvent,
         HttpServerReceiveConfig,
         HttpServerRegisterEvent,
+        HttpServerRelayConnectedEvent,
+        HttpServerRelayDisconnectedEvent,
+        HttpServerRelayPeerEvent,
+        HttpServerRelayPeerLeftEvent,
+        HttpServerRelayPeerUpdateEvent,
+        HttpServerRelayProxyReadyEvent,
         HttpServerSessionEndEvent,
         HttpServerShowEvent,
         HttpServerStartedEvent,
         HttpServerWebFileDownloadEvent,
-        HttpServerWebPrepareDownloadEvent;
+        HttpServerWebPrepareDownloadEvent,
+        RelayConfig;
 export 'package:localsend_isolates/src/isolate/child/sync_provider.dart';
 export 'package:localsend_isolates/src/isolate/child/upload_isolate.dart'
     show

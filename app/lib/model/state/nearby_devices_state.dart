@@ -14,11 +14,18 @@ class NearbyDevicesState with NearbyDevicesStateMappable {
   /// We do not trust the fingerprint, so we allow multiple devices with the same fingerprint.
   final Map<String, Set<Device>> signalingDevices;
 
+  /// Devices that are announced by the relay backend.
+  /// The key is the fingerprint of the device.
+  /// A device that is also reachable on the LAN keeps its relay channel
+  /// alongside the HTTP one, and vice versa.
+  final Map<String, Device> relayDevices;
+
   const NearbyDevicesState({
     required this.runningFavoriteScan,
     required this.runningIps,
     required this.devices,
     required this.signalingDevices,
+    required this.relayDevices,
   });
 
   Map<String, Device> get allDevices {
@@ -32,6 +39,14 @@ class NearbyDevicesState with NearbyDevicesStateMappable {
         } else {
           allDevices[device.fingerprint] = device;
         }
+      }
+    }
+    for (final device in relayDevices.values) {
+      final currentDevice = allDevices[device.fingerprint];
+      if (currentDevice != null && currentDevice.alias == device.alias) {
+        allDevices[device.fingerprint] = currentDevice.merge(device);
+      } else {
+        allDevices[device.fingerprint] = device;
       }
     }
     return allDevices;

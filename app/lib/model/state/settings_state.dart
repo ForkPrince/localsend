@@ -39,6 +39,9 @@ class SettingsState with SettingsStateMappable {
   final bool verifyChecksums; // verify checksums when receiving files
   final int discoveryTimeout;
   final bool advancedSettings;
+  final bool relayEnabled; // connect to a relay backend so other rooms can reach this device
+  final String relayServerUrl; // backend WebSocket URL
+  final String relayRoom; // shared room secret
 
   const SettingsState({
     required this.showToken,
@@ -71,5 +74,8 @@ class SettingsState with SettingsStateMappable {
     required this.verifyChecksums,
     required this.discoveryTimeout,
     required this.advancedSettings,
+    required this.relayEnabled,
+    required this.relayServerUrl,
+    required this.relayRoom,
   });
 }

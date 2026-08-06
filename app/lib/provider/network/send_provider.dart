@@ -88,6 +88,11 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
     required List<CrossFile> files,
     required bool background,
   }) async {
+    // A relayed peer is dialed through a local proxy: open the session before
+    // anything else so every request of this session (prepare + upload) goes
+    // through the backend.
+    target = await _resolveSendTarget(target);
+
     // Pinned to the device the user picked, so the request is not sent at all
     // if someone else answers on that address.
     final client = ref.read(httpProvider).pinnedTo(target.fingerprint);
@@ -450,6 +455,28 @@ class SendNotifier extends Notifier<Map<String, SendSessionState>> {
 
   /// Reports the total session progress to the foreground service notification,
   /// so that it stays up to date while the app is minimized.
+  /// Resolves the address a session dials [target] at. A relayed peer (best
+  /// channel is a [RelayChannel]) needs a session opened through the backend:
+  /// the HTTP client then dials the returned local proxy instead of a direct
+  /// address, and the TLS handshake travels through the backend to the peer.
+  Future<Device> _resolveSendTarget(Device target) async {
+    final bestChannel = target.channels.isEmpty ? null : target.channels.first;
+    if (bestChannel is! RelayChannel) {
+      return target;
+    }
+
+    final address = await ref.redux(parentIsolateProvider).dispatchAsyncTakeResult(IsolateRelayOpenProxyAction(targetId: bestChannel.peerId));
+    final separatorIndex = address.lastIndexOf(':');
+    final host = separatorIndex == -1 ? address : address.substring(0, separatorIndex);
+    final port = int.parse(address.substring(separatorIndex + 1));
+    _logger.info('Sending to ${target.alias} through relay proxy $host:$port');
+    return target.copyWith(
+      ip: host,
+      port: port,
+      https: true,
+    );
+  }
+
   void _updateForegroundServiceProgress(String sessionId) {
     if (!TransferNotification.shouldUpdate) {
       // Checked before the sum below because progress events arrive several times per second per file.

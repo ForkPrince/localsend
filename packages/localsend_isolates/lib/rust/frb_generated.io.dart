@@ -15,6 +15,7 @@ import 'package:localsend_isolates/rust/api/filename.dart';
 import 'package:localsend_isolates/rust/api/http.dart';
 import 'package:localsend_isolates/rust/api/logging.dart';
 import 'package:localsend_isolates/rust/api/model.dart';
+import 'package:localsend_isolates/rust/api/relay.dart';
 import 'package:localsend_isolates/rust/api/server.dart';
 import 'package:localsend_isolates/rust/api/stream.dart';
 import 'package:localsend_isolates/rust/api/webrtc.dart';
@@ -62,6 +63,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_RsHttpServerPtr =>
       wire._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsHttpServerPtr;
 
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_RsRelayClientPtr =>
+      wire._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClientPtr;
+
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw);
 
@@ -99,6 +103,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RsHttpServer dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsHttpServer(dynamic raw);
 
   @protected
+  RsRelayClient dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClient(dynamic raw);
+
+  @protected
   Dart2RustStreamSink dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDart2RustStreamSink(dynamic raw);
 
   @protected
@@ -130,6 +137,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RsHttpServer dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsHttpServer(dynamic raw);
+
+  @protected
+  RsRelayClient dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClient(dynamic raw);
 
   @protected
   FutureOr<void> Function(LsSignalingConnection)
@@ -180,6 +190,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RsHttpServer dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsHttpServer(dynamic raw);
 
   @protected
+  RsRelayClient dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClient(dynamic raw);
+
+  @protected
   Set<String> dco_decode_Set_String_None(dynamic raw);
 
   @protected
@@ -195,6 +208,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RustStreamSink<RsHashFileEvent> dco_decode_StreamSink_rs_hash_file_event_Sse(dynamic raw);
+
+  @protected
+  RustStreamSink<RsRelayEvent> dco_decode_StreamSink_rs_relay_event_Sse(dynamic raw);
 
   @protected
   RustStreamSink<RsServerEvent> dco_decode_StreamSink_rs_server_event_Sse(dynamic raw);
@@ -272,6 +288,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RsHttpClientError dco_decode_box_autoadd_rs_http_client_error(dynamic raw);
+
+  @protected
+  RsRelayInfo dco_decode_box_autoadd_rs_relay_info(dynamic raw);
+
+  @protected
+  RsRelayPeer dco_decode_box_autoadd_rs_relay_peer(dynamic raw);
 
   @protected
   RsStoredDevice dco_decode_box_autoadd_rs_stored_device(dynamic raw);
@@ -461,6 +483,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RsHttpClientError dco_decode_rs_http_client_error(dynamic raw);
 
   @protected
+  RsRelayEvent dco_decode_rs_relay_event(dynamic raw);
+
+  @protected
+  RsRelayInfo dco_decode_rs_relay_info(dynamic raw);
+
+  @protected
+  RsRelayPeer dco_decode_rs_relay_peer(dynamic raw);
+
+  @protected
   RsServerEvent dco_decode_rs_server_event(dynamic raw);
 
   @protected
@@ -569,6 +600,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RsHttpServer sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsHttpServer(SseDeserializer deserializer);
 
   @protected
+  RsRelayClient sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClient(SseDeserializer deserializer);
+
+  @protected
   Dart2RustStreamSink sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDart2RustStreamSink(
     SseDeserializer deserializer,
   );
@@ -610,6 +644,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RsHttpServer sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsHttpServer(SseDeserializer deserializer);
+
+  @protected
+  RsRelayClient sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClient(SseDeserializer deserializer);
 
   @protected
   Object sse_decode_DartOpaque(SseDeserializer deserializer);
@@ -656,6 +693,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RsHttpServer sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsHttpServer(SseDeserializer deserializer);
 
   @protected
+  RsRelayClient sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClient(SseDeserializer deserializer);
+
+  @protected
   Set<String> sse_decode_Set_String_None(SseDeserializer deserializer);
 
   @protected
@@ -671,6 +711,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RustStreamSink<RsHashFileEvent> sse_decode_StreamSink_rs_hash_file_event_Sse(SseDeserializer deserializer);
+
+  @protected
+  RustStreamSink<RsRelayEvent> sse_decode_StreamSink_rs_relay_event_Sse(SseDeserializer deserializer);
 
   @protected
   RustStreamSink<RsServerEvent> sse_decode_StreamSink_rs_server_event_Sse(SseDeserializer deserializer);
@@ -748,6 +791,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RsHttpClientError sse_decode_box_autoadd_rs_http_client_error(SseDeserializer deserializer);
+
+  @protected
+  RsRelayInfo sse_decode_box_autoadd_rs_relay_info(SseDeserializer deserializer);
+
+  @protected
+  RsRelayPeer sse_decode_box_autoadd_rs_relay_peer(SseDeserializer deserializer);
 
   @protected
   RsStoredDevice sse_decode_box_autoadd_rs_stored_device(SseDeserializer deserializer);
@@ -939,6 +988,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RsHttpClientError sse_decode_rs_http_client_error(SseDeserializer deserializer);
 
   @protected
+  RsRelayEvent sse_decode_rs_relay_event(SseDeserializer deserializer);
+
+  @protected
+  RsRelayInfo sse_decode_rs_relay_info(SseDeserializer deserializer);
+
+  @protected
+  RsRelayPeer sse_decode_rs_relay_peer(SseDeserializer deserializer);
+
+  @protected
   RsServerEvent sse_decode_rs_server_event(SseDeserializer deserializer);
 
   @protected
@@ -1059,6 +1117,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsHttpServer(RsHttpServer self, SseSerializer serializer);
 
   @protected
+  void sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClient(
+    RsRelayClient self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDart2RustStreamSink(
     Dart2RustStreamSink self,
     SseSerializer serializer,
@@ -1111,6 +1175,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsHttpServer(RsHttpServer self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClient(RsRelayClient self, SseSerializer serializer);
 
   @protected
   void
@@ -1177,6 +1244,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsHttpServer(RsHttpServer self, SseSerializer serializer);
 
   @protected
+  void sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClient(RsRelayClient self, SseSerializer serializer);
+
+  @protected
   void sse_encode_Set_String_None(Set<String> self, SseSerializer serializer);
 
   @protected
@@ -1193,6 +1263,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_StreamSink_rs_hash_file_event_Sse(RustStreamSink<RsHashFileEvent> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_StreamSink_rs_relay_event_Sse(RustStreamSink<RsRelayEvent> self, SseSerializer serializer);
 
   @protected
   void sse_encode_StreamSink_rs_server_event_Sse(RustStreamSink<RsServerEvent> self, SseSerializer serializer);
@@ -1271,6 +1344,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_rs_http_client_error(RsHttpClientError self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_rs_relay_info(RsRelayInfo self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_rs_relay_peer(RsRelayPeer self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_rs_stored_device(RsStoredDevice self, SseSerializer serializer);
@@ -1461,6 +1540,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_rs_http_client_error(RsHttpClientError self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_rs_relay_event(RsRelayEvent self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_rs_relay_info(RsRelayInfo self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_rs_relay_peer(RsRelayPeer self, SseSerializer serializer);
 
   @protected
   void sse_encode_rs_server_event(RsServerEvent self, SseSerializer serializer);
@@ -1884,5 +1972,37 @@ class RustLibWire implements BaseWire {
       );
   late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsHttpServer =
       _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsHttpServerPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClient(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClient(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClientPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_localsend_isolates_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClient',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClient =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClientPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClient(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClient(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClientPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_localsend_isolates_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClient',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClient =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRsRelayClientPtr
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 }

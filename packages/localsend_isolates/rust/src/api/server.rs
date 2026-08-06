@@ -1,3 +1,4 @@
+use crate::api::relay::{RsRelayClient, RsRelayEvent, RsRelayInfo};
 use crate::frb_generated::StreamSink;
 use flutter_rust_bridge::frb;
 pub use localsend::http::dto_v2::RegisterDtoV2;
@@ -99,7 +100,7 @@ pub enum RsServerEvent {
 }
 
 pub struct RsHttpServer {
-    instance: Arc<ServerInstance>,
+    pub(crate) instance: Arc<ServerInstance>,
     event_rx: Mutex<Option<mpsc::Receiver<ServerEventV2>>>,
     pending_decision: Mutex<Option<(String, oneshot::Sender<PrepareUploadDecisionV2>)>>,
     pending_uploads: Mutex<HashMap<(String, String), oneshot::Sender<FileUploadTarget>>>,
@@ -112,8 +113,8 @@ pub struct RsHttpServer {
 /// The stoppable part of a running server, shared between [RsHttpServer] and
 /// [RUNNING_SERVER] so that a leftover instance can be stopped without its
 /// Dart owner.
-struct ServerInstance {
-    handle: localsend::http::server::ServerHandle,
+pub(crate) struct ServerInstance {
+    pub(crate) handle: localsend::http::server::ServerHandle,
     stop_tx: Mutex<Option<oneshot::Sender<()>>>,
 }
 
@@ -125,6 +126,16 @@ impl ServerInstance {
             let _ = stop_tx.send(());
             self.handle.wait_stopped().await;
         }
+    }
+
+    /// Serves a connection that arrived through the relay backend (see
+    /// `crate::api::relay`), exactly like a regular TCP connection.
+    pub(crate) fn serve_relay(
+        &self,
+        stream: impl tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin + Send + 'static,
+        remote_addr: std::net::SocketAddr,
+    ) {
+        self.handle.serve_relay(stream, remote_addr);
     }
 }
 
@@ -666,6 +677,78 @@ impl RsHttpServer {
             *running_server = None;
         }
     }
+
+    /// Starts the relay connection for this running server and returns the
+    /// client handle. Incoming relay sessions are automatically served like
+    /// regular TCP connections, so peers can send to this device through the
+    /// backend without a LAN path.
+    ///
+    /// The connection is established asynchronously: a [RsRelayEvent::Connected]
+    /// is emitted once the backend answered.
+    ///
+    /// The single relay client per device lives in the httpServer isolate, next
+    /// to the server it feeds into.
+    pub async fn start_relay(
+        &self,
+        url: String,
+        room_secret: String,
+        info: RsRelayInfo,
+    ) -> anyhow::Result<RsRelayClient> {
+        let (client, mut event_rx) = localsend::relay::RelayClient::connect(&url, &room_secret, info.into())
+            .await
+            .map_err(|err| anyhow::anyhow!("Could not connect to relay: {err:#}"))?;
+
+        let (rs_tx, rs_rx) = mpsc::channel::<RsRelayEvent>(64);
+        let instance = self.instance.clone();
+        tokio::spawn({
+            let client = client.clone();
+            async move {
+                while let Some(event) = event_rx.recv().await {
+                    let rs_event = match event {
+                        localsend::relay::RelayEvent::Connected { client_id } => {
+                            RsRelayEvent::Connected { client_id: client_id.to_string() }
+                        }
+                        localsend::relay::RelayEvent::Peer { peer } => {
+                            RsRelayEvent::Peer { peer: (&peer).into() }
+                        }
+                        localsend::relay::RelayEvent::PeerUpdate { peer } => {
+                            RsRelayEvent::PeerUpdate { peer: (&peer).into() }
+                        }
+                        localsend::relay::RelayEvent::PeerLeft { peer_id } => {
+                            RsRelayEvent::PeerLeft { peer_id: peer_id.to_string() }
+                        }
+                        localsend::relay::RelayEvent::Incoming {
+                            session_id,
+                            peer: _,
+                            pipe,
+                        } => {
+                            // Serve the session like a regular TCP connection.
+                            instance.serve_relay(pipe, relay_remote_addr(session_id));
+                            continue;
+                        }
+                        localsend::relay::RelayEvent::Disconnected { error } => {
+                            RsRelayEvent::Disconnected { error }
+                        }
+                    };
+                    if rs_tx.send(rs_event).await.is_err() {
+                        break;
+                    }
+                }
+                // Keep the client alive as long as the server owns the task.
+                drop(client);
+            }
+        });
+
+        Ok(RsRelayClient::new(Arc::new(client), rs_rx))
+    }
+}
+
+/// A synthetic remote address for relayed connections: the peer identity is
+/// read from the TLS handshake, so this is only used for display.
+fn relay_remote_addr(session_id: uuid::Uuid) -> std::net::SocketAddr {
+    let bytes = session_id.as_bytes();
+    let port = u16::from_be_bytes([bytes[0], bytes[1]]);
+    std::net::SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST), port)
 }
 
 /// Receives the next event from an optional channel, or pends forever when the

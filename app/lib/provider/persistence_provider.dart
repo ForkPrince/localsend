@@ -94,6 +94,9 @@ const _receiveViaLinkAutoAccept = 'ls_receive_via_link_auto_accept';
 const _createChecksums = 'ls_create_checksums';
 const _verifyChecksums = 'ls_verify_checksums';
 const _advancedSettingsKey = 'ls_advanced_settings';
+const _relayEnabled = 'ls_relay_enabled';
+const _relayServerUrl = 'ls_relay_server_url';
+const _relayRoom = 'ls_relay_room';
 const _whatsNewKey = 'ls_whats_new';
 
 final persistenceProvider = Provider<PersistenceService>((ref) {
@@ -451,6 +454,30 @@ class PersistenceService {
 
   Future<void> setAdvancedSettingsEnabled(bool isEnabled) async {
     await _prefs.setBool(_advancedSettingsKey, isEnabled);
+  }
+
+  bool getRelayEnabled() {
+    return _prefs.getBool(_relayEnabled) ?? false;
+  }
+
+  Future<void> setRelayEnabled(bool relayEnabled) async {
+    await _prefs.setBool(_relayEnabled, relayEnabled);
+  }
+
+  String getRelayServerUrl() {
+    return _prefs.getString(_relayServerUrl) ?? '';
+  }
+
+  Future<void> setRelayServerUrl(String url) async {
+    await _prefs.setString(_relayServerUrl, url);
+  }
+
+  String getRelayRoom() {
+    return _prefs.getString(_relayRoom) ?? '';
+  }
+
+  Future<void> setRelayRoom(String room) async {
+    await _prefs.setString(_relayRoom, room);
   }
 
   QuickSaveMode getQuickSave() {

@@ -122,6 +122,8 @@ class HttpServerService {
     await _requireServer().failFileDownload(sessionId: sessionId, fileId: fileId);
   }
 
+  RsHttpServer? get server => _server;
+
   /// Stops the server. The event stream returned by [start] will end.
   /// Completes once the port is released and can be bound again.
   Future<void> stop() async {

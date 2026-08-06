@@ -301,11 +301,15 @@ class IsolateHttpServerStartAction extends ReduxActionWithResult<IsolateControll
   /// application instance request this one to show itself. `null` disables it.
   final String? showToken;
 
+  /// The relay configuration. `null` leaves the relay disabled.
+  final RelayConfig? relay;
+
   IsolateHttpServerStartAction({
     required this.pin,
     required this.verifyChecksums,
     required this.web,
     required this.showToken,
+    required this.relay,
   });
 
   @override
@@ -323,9 +327,36 @@ class IsolateHttpServerStartAction extends ReduxActionWithResult<IsolateControll
           verifyChecksums: verifyChecksums,
           web: web,
           showToken: showToken,
+          relay: relay,
         ),
       ),
     );
+  }
+}
+
+/// Opens a relay session to the device [targetId] and returns the local
+/// address to dial for a relayed HTTP transfer.
+class IsolateRelayOpenProxyAction extends AsyncReduxActionWithResult<IsolateController, ParentIsolateState, String> {
+  final String targetId;
+
+  IsolateRelayOpenProxyAction({
+    required this.targetId,
+  });
+
+  @override
+  Future<(ParentIsolateState, String)> reduce() async {
+    final connection = state.httpServer;
+    if (connection == null) {
+      throw StateError('httpServer is not initialized');
+    }
+
+    final result = await connection
+        .sendWrappedTaskAndListenStream(
+          task: HttpServerOpenRelayProxyTask(targetId: targetId),
+        )
+        .first;
+
+    return (state, (result as HttpServerRelayProxyReadyEvent).address);
   }
 }
 

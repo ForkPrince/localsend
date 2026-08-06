@@ -4,6 +4,7 @@ import 'package:localsend_app/gen/strings.g.dart';
 import 'package:localsend_app/model/cross_file.dart';
 import 'package:localsend_app/model/state/send/web/web_send_state.dart';
 import 'package:localsend_app/model/state/server/server_state.dart';
+import 'package:localsend_app/provider/network/nearby_devices_provider.dart';
 import 'package:localsend_app/provider/network/server/controller/receive_controller.dart';
 import 'package:localsend_app/provider/network/server/controller/send_controller.dart';
 import 'package:localsend_app/provider/network/server/server_utils.dart';
@@ -11,7 +12,9 @@ import 'package:localsend_app/provider/settings_provider.dart';
 import 'package:localsend_app/util/alias_generator.dart';
 import 'package:localsend_isolates/constants.dart';
 import 'package:localsend_isolates/isolate.dart';
+import 'package:localsend_isolates/model/device.dart';
 import 'package:localsend_isolates/model/dto/multicast_dto.dart';
+import 'package:localsend_isolates/rust/api/relay.dart';
 import 'package:localsend_isolates/rust/api/server.dart' show WebI18n, WebParams, WebSendParams;
 import 'package:localsend_isolates/util/rust.dart';
 import 'package:logging/logging.dart';
@@ -140,6 +143,10 @@ class ServerService extends Notifier<ServerState?> {
     _syncServerState(alias: alias, port: port, https: https, serverRunning: true, download: webSendState != null);
 
     final settings = ref.read(settingsProvider);
+    final syncState = ref.read(parentIsolateProvider).syncState;
+    final relayConfig = syncState.relayEnabled && syncState.relayServerUrl.isNotEmpty
+        ? RelayConfig(url: syncState.relayServerUrl, roomSecret: syncState.relayRoom)
+        : null;
     final events = ref
         .redux(parentIsolateProvider)
         .dispatchTakeResult(
@@ -172,6 +179,7 @@ class ServerService extends Notifier<ServerState?> {
                   )
                 : null,
             showToken: settings.showToken,
+            relay: relayConfig,
           ),
         );
 
@@ -355,7 +363,60 @@ class ServerService extends Notifier<ServerState?> {
       case HttpServerWebFileDownloadEvent():
         // ignore: discarded_futures
         _sendController.onFileDownload(event);
+      case HttpServerRelayConnectedEvent():
+        // A fresh relay room/session: start from an empty peer list.
+        _relayPeerIdFingerprint.clear();
+        ref.redux(nearbyDevicesProvider).dispatch(ClearRelayDevicesAction());
+      case HttpServerRelayPeerEvent():
+        _onRelayPeer(event.peer);
+      case HttpServerRelayPeerUpdateEvent():
+        _onRelayPeer(event.peer);
+      case HttpServerRelayPeerLeftEvent():
+        _onRelayPeerLeft(event.peerId);
+      case HttpServerRelayDisconnectedEvent():
+        _relayPeerIdFingerprint.clear();
+        ref.redux(nearbyDevicesProvider).dispatch(ClearRelayDevicesAction());
+      case HttpServerRelayProxyReadyEvent():
+        break;
     }
+  }
+
+  /// The mapping from a backend peer ID to the device fingerprint, so a peer
+  /// that leaves can be unregistered.
+  final Map<String, String> _relayPeerIdFingerprint = {};
+
+  void _onRelayPeer(RsRelayPeer peer) {
+    final settings = ref.read(settingsProvider);
+    final device = Device(
+      signalingId: null,
+      ip: null,
+      version: peer.info.version,
+      port: -1,
+      https: peer.info.certFingerprint != null,
+      fingerprint: peer.info.fingerprint,
+      alias: peer.info.alias,
+      deviceModel: peer.info.deviceModel,
+      deviceType: peer.info.deviceType?.toDart() ?? DeviceType.desktop,
+      download: peer.info.download,
+      channels: [
+        RelayChannel(
+          backend: settings.relayServerUrl,
+          room: settings.relayRoom,
+          peerId: peer.clientId,
+        ),
+      ],
+    );
+    _relayPeerIdFingerprint[peer.clientId] = peer.info.fingerprint;
+    // ignore: discarded_futures
+    ref.redux(nearbyDevicesProvider).dispatchAsync(RegisterRelayDeviceAction(device));
+  }
+
+  void _onRelayPeerLeft(String peerId) {
+    final fingerprint = _relayPeerIdFingerprint.remove(peerId);
+    if (fingerprint == null) {
+      return;
+    }
+    ref.redux(nearbyDevicesProvider).dispatch(UnregisterRelayDeviceAction(fingerprint));
   }
 
   void _syncServerState({

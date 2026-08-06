@@ -75,6 +75,7 @@ class DeviceChannelMapper extends ClassMapperBase<DeviceChannel> {
       MapperContainer.globals.use(_instance = DeviceChannelMapper._());
       HttpChannelMapper.ensureInitialized();
       SignalingChannelMapper.ensureInitialized();
+      RelayChannelMapper.ensureInitialized();
     }
     return _instance!;
   }
@@ -367,6 +368,145 @@ class _SignalingChannelCopyWithImpl<$R, $Out>
   SignalingChannelCopyWith<$R2, SignalingChannel, $Out2> $chain<$R2, $Out2>(
     Then<$Out2, $R2> t,
   ) => _SignalingChannelCopyWithImpl<$R2, $Out2>($value, $cast, t);
+}
+
+class RelayChannelMapper extends ClassMapperBase<RelayChannel> {
+  RelayChannelMapper._();
+
+  static RelayChannelMapper? _instance;
+  static RelayChannelMapper ensureInitialized() {
+    if (_instance == null) {
+      MapperContainer.globals.use(_instance = RelayChannelMapper._());
+      DeviceChannelMapper.ensureInitialized();
+    }
+    return _instance!;
+  }
+
+  @override
+  final String id = 'RelayChannel';
+
+  static String _$backend(RelayChannel v) => v.backend;
+  static const Field<RelayChannel, String> _f$backend = Field(
+    'backend',
+    _$backend,
+  );
+  static String _$room(RelayChannel v) => v.room;
+  static const Field<RelayChannel, String> _f$room = Field('room', _$room);
+  static String _$peerId(RelayChannel v) => v.peerId;
+  static const Field<RelayChannel, String> _f$peerId = Field(
+    'peerId',
+    _$peerId,
+  );
+
+  @override
+  final MappableFields<RelayChannel> fields = const {
+    #backend: _f$backend,
+    #room: _f$room,
+    #peerId: _f$peerId,
+  };
+
+  static RelayChannel _instantiate(DecodingData data) {
+    return RelayChannel(
+      backend: data.dec(_f$backend),
+      room: data.dec(_f$room),
+      peerId: data.dec(_f$peerId),
+    );
+  }
+
+  @override
+  final Function instantiate = _instantiate;
+
+  static RelayChannel fromJson(Map<String, dynamic> map) {
+    return ensureInitialized().decodeMap<RelayChannel>(map);
+  }
+
+  static RelayChannel deserialize(String json) {
+    return ensureInitialized().decodeJson<RelayChannel>(json);
+  }
+}
+
+mixin RelayChannelMappable {
+  String serialize() {
+    return RelayChannelMapper.ensureInitialized().encodeJson<RelayChannel>(
+      this as RelayChannel,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return RelayChannelMapper.ensureInitialized().encodeMap<RelayChannel>(
+      this as RelayChannel,
+    );
+  }
+
+  RelayChannelCopyWith<RelayChannel, RelayChannel, RelayChannel> get copyWith =>
+      _RelayChannelCopyWithImpl<RelayChannel, RelayChannel>(
+        this as RelayChannel,
+        $identity,
+        $identity,
+      );
+  @override
+  String toString() {
+    return RelayChannelMapper.ensureInitialized().stringifyValue(
+      this as RelayChannel,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return RelayChannelMapper.ensureInitialized().equalsValue(
+      this as RelayChannel,
+      other,
+    );
+  }
+
+  @override
+  int get hashCode {
+    return RelayChannelMapper.ensureInitialized().hashValue(
+      this as RelayChannel,
+    );
+  }
+}
+
+extension RelayChannelValueCopy<$R, $Out>
+    on ObjectCopyWith<$R, RelayChannel, $Out> {
+  RelayChannelCopyWith<$R, RelayChannel, $Out> get $asRelayChannel =>
+      $base.as((v, t, t2) => _RelayChannelCopyWithImpl<$R, $Out>(v, t, t2));
+}
+
+abstract class RelayChannelCopyWith<$R, $In extends RelayChannel, $Out>
+    implements DeviceChannelCopyWith<$R, $In, $Out> {
+  @override
+  $R call({String? backend, String? room, String? peerId});
+  RelayChannelCopyWith<$R2, $In, $Out2> $chain<$R2, $Out2>(Then<$Out2, $R2> t);
+}
+
+class _RelayChannelCopyWithImpl<$R, $Out>
+    extends ClassCopyWithBase<$R, RelayChannel, $Out>
+    implements RelayChannelCopyWith<$R, RelayChannel, $Out> {
+  _RelayChannelCopyWithImpl(super.value, super.then, super.then2);
+
+  @override
+  late final ClassMapperBase<RelayChannel> $mapper =
+      RelayChannelMapper.ensureInitialized();
+  @override
+  $R call({String? backend, String? room, String? peerId}) => $apply(
+    FieldCopyWithData({
+      if (backend != null) #backend: backend,
+      if (room != null) #room: room,
+      if (peerId != null) #peerId: peerId,
+    }),
+  );
+  @override
+  RelayChannel $make(CopyWithData data) => RelayChannel(
+    backend: data.get(#backend, or: $value.backend),
+    room: data.get(#room, or: $value.room),
+    peerId: data.get(#peerId, or: $value.peerId),
+  );
+
+  @override
+  RelayChannelCopyWith<$R2, RelayChannel, $Out2> $chain<$R2, $Out2>(
+    Then<$Out2, $R2> t,
+  ) => _RelayChannelCopyWithImpl<$R2, $Out2>($value, $cast, t);
 }
 
 class DeviceMapper extends ClassMapperBase<Device> {

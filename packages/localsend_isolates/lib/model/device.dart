@@ -41,6 +41,22 @@ class SignalingChannel extends DeviceChannel with SignalingChannelMappable {
   const SignalingChannel({required this.signalingServer});
 }
 
+/// The device is reachable through a relay backend, in the room derived from
+/// the shared room secret.
+@MappableClass()
+class RelayChannel extends DeviceChannel with RelayChannelMappable {
+  /// The backend URL the device is registered with.
+  final String backend;
+
+  /// The room key the device is in.
+  final String room;
+
+  /// The ID the backend assigned to the device.
+  final String peerId;
+
+  const RelayChannel({required this.backend, required this.room, required this.peerId});
+}
+
 /// Whether a [DeviceLog] discovered the device or re-confirmed it.
 enum DeviceLogKind {
   discovered,
@@ -103,6 +119,7 @@ class Device with DeviceMappable {
         switch (channel) {
           HttpChannel() => TransmissionMethod.http,
           SignalingChannel() => TransmissionMethod.webrtc,
+          RelayChannel() => TransmissionMethod.http,
         },
     };
   }

@@ -109,6 +109,33 @@ class IsolateSyncServerStateAction extends ReduxAction<IsolateController, Parent
   }
 }
 
+/// Publishes the relay settings to all child isolates.
+class IsolateSyncRelayStateAction extends ReduxAction<IsolateController, ParentIsolateState> {
+  final bool relayEnabled;
+  final String relayServerUrl;
+  final String relayRoom;
+
+  IsolateSyncRelayStateAction({
+    required this.relayEnabled,
+    required this.relayServerUrl,
+    required this.relayRoom,
+  });
+
+  @override
+  ParentIsolateState reduce() {
+    dispatch(
+      _PublishSyncStateAction(
+        syncState: state.syncState.copyWith(
+          relayEnabled: relayEnabled,
+          relayServerUrl: relayServerUrl,
+          relayRoom: relayRoom,
+        ),
+      ),
+    );
+    return state;
+  }
+}
+
 /// Publishes the new [SyncState] to all child isolates.
 class _PublishSyncStateAction extends ReduxAction<IsolateController, ParentIsolateState> {
   final SyncState syncState;

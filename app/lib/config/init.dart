@@ -189,6 +189,9 @@ Future<RefenaContainer> preInit(List<String> args) async {
             discoveryTimeout: settings.discoveryTimeout,
             serverRunning: true,
             download: false,
+            relayEnabled: settings.relayEnabled,
+            relayServerUrl: settings.relayServerUrl,
+            relayRoom: settings.relayRoom,
           ),
         ),
       );

@@ -24,6 +24,11 @@ class SyncState with SyncStateMappable {
   final bool serverRunning;
   final bool download;
 
+  /// Whether the relay to a backend server is enabled, and its configuration.
+  final bool relayEnabled;
+  final String relayServerUrl;
+  final String relayRoom;
+
   SyncState({
     required this.rootIsolateToken,
     required this.securityContext,
@@ -37,11 +42,14 @@ class SyncState with SyncStateMappable {
     required this.discoveryTimeout,
     required this.serverRunning,
     required this.download,
+    required this.relayEnabled,
+    required this.relayServerUrl,
+    required this.relayRoom,
   });
 
   @override
   String toString() {
-    return 'SyncState(securityContext: <SecurityContext>, deviceInfo: $deviceInfo, alias: $alias, port: $port, networkWhitelist: $networkWhitelist, networkBlacklist: $networkBlacklist, protocol: $protocol, multicastGroup: $multicastGroup, discoveryTimeout: $discoveryTimeout, serverRunning: $serverRunning, download: $download)';
+    return 'SyncState(securityContext: <SecurityContext>, deviceInfo: $deviceInfo, alias: $alias, port: $port, networkWhitelist: $networkWhitelist, networkBlacklist: $networkBlacklist, protocol: $protocol, multicastGroup: $multicastGroup, discoveryTimeout: $discoveryTimeout, serverRunning: $serverRunning, download: $download, relayEnabled: $relayEnabled)';
   }
 }
 

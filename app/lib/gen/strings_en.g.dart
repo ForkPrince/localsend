@@ -1211,6 +1211,15 @@ class Translations$settingsTab$network$en {
   /// en: 'You might not be detected by other devices because you are using a custom multicast address. (default: {defaultMulticast})'
   String multicastGroupWarning({required Object defaultMulticast}) =>
       'You might not be detected by other devices because you are using a custom multicast address. (default: ${defaultMulticast})';
+
+  /// en: 'Relay'
+  String get relay => 'Relay';
+
+  /// en: 'Relay server URL'
+  String get relayServerUrl => 'Relay server URL';
+
+  /// en: 'Relay room secret'
+  String get relayRoom => 'Relay room secret';
 }
 
 // Path: settingsTab.other

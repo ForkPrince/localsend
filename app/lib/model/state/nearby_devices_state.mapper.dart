@@ -41,6 +41,10 @@ class NearbyDevicesStateMapper extends ClassMapperBase<NearbyDevicesState> {
       v.signalingDevices;
   static const Field<NearbyDevicesState, Map<String, Set<Device>>>
   _f$signalingDevices = Field('signalingDevices', _$signalingDevices);
+  static Map<String, Device> _$relayDevices(NearbyDevicesState v) =>
+      v.relayDevices;
+  static const Field<NearbyDevicesState, Map<String, Device>> _f$relayDevices =
+      Field('relayDevices', _$relayDevices);
 
   @override
   final MappableFields<NearbyDevicesState> fields = const {
@@ -48,6 +52,7 @@ class NearbyDevicesStateMapper extends ClassMapperBase<NearbyDevicesState> {
     #runningIps: _f$runningIps,
     #devices: _f$devices,
     #signalingDevices: _f$signalingDevices,
+    #relayDevices: _f$relayDevices,
   };
 
   static NearbyDevicesState _instantiate(DecodingData data) {
@@ -56,6 +61,7 @@ class NearbyDevicesStateMapper extends ClassMapperBase<NearbyDevicesState> {
       runningIps: data.dec(_f$runningIps),
       devices: data.dec(_f$devices),
       signalingDevices: data.dec(_f$signalingDevices),
+      relayDevices: data.dec(_f$relayDevices),
     );
   }
 
@@ -139,11 +145,14 @@ abstract class NearbyDevicesStateCopyWith<
     ObjectCopyWith<$R, Set<Device>, Set<Device>>
   >
   get signalingDevices;
+  MapCopyWith<$R, String, Device, DeviceCopyWith<$R, Device, Device>>
+  get relayDevices;
   $R call({
     bool? runningFavoriteScan,
     Set<String>? runningIps,
     Map<String, Device>? devices,
     Map<String, Set<Device>>? signalingDevices,
+    Map<String, Device>? relayDevices,
   });
   NearbyDevicesStateCopyWith<$R2, $In, $Out2> $chain<$R2, $Out2>(
     Then<$Out2, $R2> t,
@@ -178,11 +187,19 @@ class _NearbyDevicesStateCopyWithImpl<$R, $Out>
     (v) => call(signalingDevices: v),
   );
   @override
+  MapCopyWith<$R, String, Device, DeviceCopyWith<$R, Device, Device>>
+  get relayDevices => MapCopyWith(
+    $value.relayDevices,
+    (v, t) => v.copyWith.$chain(t),
+    (v) => call(relayDevices: v),
+  );
+  @override
   $R call({
     bool? runningFavoriteScan,
     Set<String>? runningIps,
     Map<String, Device>? devices,
     Map<String, Set<Device>>? signalingDevices,
+    Map<String, Device>? relayDevices,
   }) => $apply(
     FieldCopyWithData({
       if (runningFavoriteScan != null)
@@ -190,6 +207,7 @@ class _NearbyDevicesStateCopyWithImpl<$R, $Out>
       if (runningIps != null) #runningIps: runningIps,
       if (devices != null) #devices: devices,
       if (signalingDevices != null) #signalingDevices: signalingDevices,
+      if (relayDevices != null) #relayDevices: relayDevices,
     }),
   );
   @override
@@ -201,6 +219,7 @@ class _NearbyDevicesStateCopyWithImpl<$R, $Out>
     runningIps: data.get(#runningIps, or: $value.runningIps),
     devices: data.get(#devices, or: $value.devices),
     signalingDevices: data.get(#signalingDevices, or: $value.signalingDevices),
+    relayDevices: data.get(#relayDevices, or: $value.relayDevices),
   );
 
   @override

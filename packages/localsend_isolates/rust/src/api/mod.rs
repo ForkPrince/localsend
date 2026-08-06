@@ -5,6 +5,7 @@ pub mod filename;
 pub mod http;
 pub mod logging;
 pub mod model;
+pub mod relay;
 pub mod server;
 pub mod stream;
 pub mod webrtc;

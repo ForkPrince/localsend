@@ -21,7 +21,10 @@ final settingsProvider = NotifierProvider<SettingsService, SettingsState>(
     if (_listEq(syncState.networkWhitelist, next.networkWhitelist) &&
         _listEq(syncState.networkBlacklist, next.networkBlacklist) &&
         syncState.multicastGroup == next.multicastGroup &&
-        syncState.discoveryTimeout == next.discoveryTimeout) {
+        syncState.discoveryTimeout == next.discoveryTimeout &&
+        syncState.relayEnabled == next.relayEnabled &&
+        syncState.relayServerUrl == next.relayServerUrl &&
+        syncState.relayRoom == next.relayRoom) {
       return;
     }
 
@@ -35,6 +38,18 @@ final settingsProvider = NotifierProvider<SettingsService, SettingsState>(
             discoveryTimeout: next.discoveryTimeout,
           ),
         );
+
+    if (syncState.relayEnabled != next.relayEnabled || syncState.relayServerUrl != next.relayServerUrl || syncState.relayRoom != next.relayRoom) {
+      ref
+          .redux(parentIsolateProvider)
+          .dispatch(
+            IsolateSyncRelayStateAction(
+              relayEnabled: next.relayEnabled,
+              relayServerUrl: next.relayServerUrl,
+              relayRoom: next.relayRoom,
+            ),
+          );
+    }
   },
 );
 
@@ -75,6 +90,9 @@ class SettingsService extends PureNotifier<SettingsState> {
     verifyChecksums: _persistence.getVerifyChecksums(),
     discoveryTimeout: _persistence.getDiscoveryTimeout(),
     advancedSettings: _persistence.getAdvancedSettingsEnabled(),
+    relayEnabled: _persistence.getRelayEnabled(),
+    relayServerUrl: _persistence.getRelayServerUrl(),
+    relayRoom: _persistence.getRelayRoom(),
   );
 
   Future<void> setAlias(String alias) async {
@@ -295,6 +313,27 @@ class SettingsService extends PureNotifier<SettingsState> {
     await _persistence.setVerifyChecksums(verifyChecksums);
     state = state.copyWith(
       verifyChecksums: verifyChecksums,
+    );
+  }
+
+  Future<void> setRelayEnabled(bool relayEnabled) async {
+    await _persistence.setRelayEnabled(relayEnabled);
+    state = state.copyWith(
+      relayEnabled: relayEnabled,
+    );
+  }
+
+  Future<void> setRelayServerUrl(String relayServerUrl) async {
+    await _persistence.setRelayServerUrl(relayServerUrl);
+    state = state.copyWith(
+      relayServerUrl: relayServerUrl,
+    );
+  }
+
+  Future<void> setRelayRoom(String relayRoom) async {
+    await _persistence.setRelayRoom(relayRoom);
+    state = state.copyWith(
+      relayRoom: relayRoom,
     );
   }
 }

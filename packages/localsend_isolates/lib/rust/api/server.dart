@@ -6,11 +6,12 @@
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 import 'package:localsend_isolates/rust/api/model.dart';
+import 'package:localsend_isolates/rust/api/relay.dart';
 import 'package:localsend_isolates/rust/frb_generated.dart';
 
 part 'server.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `handle_server_event`, `handle_web_event`, `recv_opt`, `resolve_file_content`, `resolve_upload_target`, `stop`
+// These functions are ignored because they are not marked as `pub`: `handle_server_event`, `handle_web_event`, `recv_opt`, `relay_remote_addr`, `resolve_file_content`, `resolve_upload_target`, `serve_relay`, `stop`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `ServerInstance`
 
 /// Starts the HTTP server on the given port (IPv4 and IPv6).
@@ -116,6 +117,18 @@ abstract class RsHttpServer implements RustOpaqueInterface {
   /// Passing the accepted file IDs (a subset of the offered files) accepts the request.
   /// Passing `None` declines the request.
   Future<void> respondPrepareUpload({List<String>? acceptedFileIds});
+
+  /// Starts the relay connection for this running server and returns the
+  /// client handle. Incoming relay sessions are automatically served like
+  /// regular TCP connections, so peers can send to this device through the
+  /// backend without a LAN path.
+  ///
+  /// The connection is established asynchronously: a [RsRelayEvent::Connected]
+  /// is emitted once the backend answered.
+  ///
+  /// The single relay client per device lives in the httpServer isolate, next
+  /// to the server it feeds into.
+  Future<RsRelayClient> startRelay({required String url, required String roomSecret, required RsRelayInfo info});
 
   /// Stops the server.
   /// Returns after the listeners are closed, so the port can be bound again.

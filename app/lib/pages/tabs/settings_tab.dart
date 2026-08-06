@@ -489,6 +489,36 @@ class SettingsTab extends StatelessWidget {
                       },
                     ),
                   ),
+                if (vm.advanced)
+                  _BooleanEntry(
+                    label: t.settingsTab.network.relay,
+                    value: vm.settings.relayEnabled,
+                    onChanged: (b) async {
+                      await ref.notifier(settingsProvider).setRelayEnabled(b);
+                    },
+                  ),
+                if (vm.advanced && vm.settings.relayEnabled) ...[
+                  _SettingsEntry(
+                    label: t.settingsTab.network.relayServerUrl,
+                    child: TextFieldTv(
+                      name: t.settingsTab.network.relayServerUrl,
+                      controller: vm.relayServerUrlController,
+                      onChanged: (s) async {
+                        await ref.notifier(settingsProvider).setRelayServerUrl(s);
+                      },
+                    ),
+                  ),
+                  _SettingsEntry(
+                    label: t.settingsTab.network.relayRoom,
+                    child: TextFieldTv(
+                      name: t.settingsTab.network.relayRoom,
+                      controller: vm.relayRoomController,
+                      onChanged: (s) async {
+                        await ref.notifier(settingsProvider).setRelayRoom(s);
+                      },
+                    ),
+                  ),
+                ],
                 AnimatedCrossFade(
                   crossFadeState: vm.settings.port != defaultPort ? CrossFadeState.showSecond : CrossFadeState.showFirst,
                   duration: const Duration(milliseconds: 200),

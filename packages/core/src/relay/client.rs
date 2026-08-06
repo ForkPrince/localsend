@@ -80,6 +80,9 @@ impl std::fmt::Display for RelayEvent {
 enum WsOut {
     Control(RelayClientMessage),
     Data { session_id: Uuid, bytes: Vec<u8> },
+
+    /// Signals the writer to close the websocket and finish.
+    Terminate,
 }
 
 /// Per-session state kept by the client: the end that feeds the bytes received
@@ -105,6 +108,9 @@ struct RelayClientInner {
 
     /// Channel on which events are emitted.
     event_tx: mpsc::Sender<RelayEvent>,
+
+    /// Cancels the receive loop when the client is stopped.
+    close: CancellationToken,
 }
 
 /// A handle to a connected relay client.
@@ -148,6 +154,10 @@ impl RelayClient {
                     WsOut::Data { session_id, bytes } => {
                         Message::Binary(Bytes::from(encode_data(session_id, &bytes)))
                     }
+                    WsOut::Terminate => {
+                        let _ = ws_write.close().await;
+                        break;
+                    }
                 };
                 if ws_write.send(frame).await.is_err() {
                     break;
@@ -161,6 +171,7 @@ impl RelayClient {
             opened: Mutex::new(HashMap::new()),
             client_id: RwLock::new(None),
             event_tx,
+            close: CancellationToken::new(),
         });
 
         inner
@@ -190,6 +201,16 @@ impl RelayClient {
             .send(WsOut::Control(RelayClientMessage::Update { info }))
             .await
             .map_err(|_| anyhow!("Relay connection closed"))
+    }
+
+    /// Stops the client: closes the websocket and ends every session.
+    /// Emits no further events; [RelayEvent::Disconnected] is not emitted.
+    pub async fn stop(&self) {
+        self.inner.close.cancel();
+        let _ = self.inner.ws_tx.send(WsOut::Terminate).await;
+        // Wake the receive loop off the blocked `ws_read.next()`.
+        // Closing the write side above is enough on most stacks; the session
+        // cleanup on receive-loop exit covers the rest.
     }
 
     /// Opens a relay session to the device `target_id` and returns the pipe to
@@ -327,7 +348,12 @@ async fn receive_loop(
     mut ws_read: impl Stream<Item = Result<Message, tungstenite::Error>> + Unpin,
 ) {
     let event_tx = inner.event_tx.clone();
-    while let Some(message) = ws_read.next().await {
+    loop {
+        let message = tokio::select! {
+            _ = inner.close.cancelled() => break,
+            message = ws_read.next() => message,
+        };
+        let Some(message) = message else { break };
         match message {
             Ok(Message::Text(text)) => {
                 let message = match serde_json::from_str::<RelayServerMessage>(&text) {
@@ -392,9 +418,13 @@ async fn receive_loop(
             let _ = tx.send(Err(()));
         }
     }
-    let _ = event_tx
-        .send(RelayEvent::Disconnected { error: None })
-        .await;
+    // `stop` cancelled the token: the client is shutting down deliberately and
+    // must not emit a Disconnected.
+    if !inner.close.is_cancelled() {
+        let _ = event_tx
+            .send(RelayEvent::Disconnected { error: None })
+            .await;
+    }
 }
 
 /// An inbound session opened by a peer: creates the pipe and emits it.

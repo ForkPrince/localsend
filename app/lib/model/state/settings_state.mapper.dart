@@ -169,6 +169,21 @@ class SettingsStateMapper extends ClassMapperBase<SettingsState> {
     'advancedSettings',
     _$advancedSettings,
   );
+  static bool _$relayEnabled(SettingsState v) => v.relayEnabled;
+  static const Field<SettingsState, bool> _f$relayEnabled = Field(
+    'relayEnabled',
+    _$relayEnabled,
+  );
+  static String _$relayServerUrl(SettingsState v) => v.relayServerUrl;
+  static const Field<SettingsState, String> _f$relayServerUrl = Field(
+    'relayServerUrl',
+    _$relayServerUrl,
+  );
+  static String _$relayRoom(SettingsState v) => v.relayRoom;
+  static const Field<SettingsState, String> _f$relayRoom = Field(
+    'relayRoom',
+    _$relayRoom,
+  );
 
   @override
   final MappableFields<SettingsState> fields = const {
@@ -202,6 +217,9 @@ class SettingsStateMapper extends ClassMapperBase<SettingsState> {
     #verifyChecksums: _f$verifyChecksums,
     #discoveryTimeout: _f$discoveryTimeout,
     #advancedSettings: _f$advancedSettings,
+    #relayEnabled: _f$relayEnabled,
+    #relayServerUrl: _f$relayServerUrl,
+    #relayRoom: _f$relayRoom,
   };
 
   static SettingsState _instantiate(DecodingData data) {
@@ -236,6 +254,9 @@ class SettingsStateMapper extends ClassMapperBase<SettingsState> {
       verifyChecksums: data.dec(_f$verifyChecksums),
       discoveryTimeout: data.dec(_f$discoveryTimeout),
       advancedSettings: data.dec(_f$advancedSettings),
+      relayEnabled: data.dec(_f$relayEnabled),
+      relayServerUrl: data.dec(_f$relayServerUrl),
+      relayRoom: data.dec(_f$relayRoom),
     );
   }
 
@@ -336,6 +357,9 @@ abstract class SettingsStateCopyWith<$R, $In extends SettingsState, $Out>
     bool? verifyChecksums,
     int? discoveryTimeout,
     bool? advancedSettings,
+    bool? relayEnabled,
+    String? relayServerUrl,
+    String? relayRoom,
   });
   SettingsStateCopyWith<$R2, $In, $Out2> $chain<$R2, $Out2>(Then<$Out2, $R2> t);
 }
@@ -398,6 +422,9 @@ class _SettingsStateCopyWithImpl<$R, $Out>
     bool? verifyChecksums,
     int? discoveryTimeout,
     bool? advancedSettings,
+    bool? relayEnabled,
+    String? relayServerUrl,
+    String? relayRoom,
   }) => $apply(
     FieldCopyWithData({
       if (showToken != null) #showToken: showToken,
@@ -434,6 +461,9 @@ class _SettingsStateCopyWithImpl<$R, $Out>
       if (verifyChecksums != null) #verifyChecksums: verifyChecksums,
       if (discoveryTimeout != null) #discoveryTimeout: discoveryTimeout,
       if (advancedSettings != null) #advancedSettings: advancedSettings,
+      if (relayEnabled != null) #relayEnabled: relayEnabled,
+      if (relayServerUrl != null) #relayServerUrl: relayServerUrl,
+      if (relayRoom != null) #relayRoom: relayRoom,
     }),
   );
   @override
@@ -480,6 +510,9 @@ class _SettingsStateCopyWithImpl<$R, $Out>
     verifyChecksums: data.get(#verifyChecksums, or: $value.verifyChecksums),
     discoveryTimeout: data.get(#discoveryTimeout, or: $value.discoveryTimeout),
     advancedSettings: data.get(#advancedSettings, or: $value.advancedSettings),
+    relayEnabled: data.get(#relayEnabled, or: $value.relayEnabled),
+    relayServerUrl: data.get(#relayServerUrl, or: $value.relayServerUrl),
+    relayRoom: data.get(#relayRoom, or: $value.relayRoom),
   );
 
   @override

@@ -41,6 +41,7 @@ class NearbyDevicesService extends ReduxNotifier<NearbyDevicesState> {
     runningIps: {},
     devices: {},
     signalingDevices: {},
+    relayDevices: {},
   );
 }
 
@@ -66,6 +67,47 @@ class ClearFoundDevicesAction extends ReduxAction<NearbyDevicesService, NearbyDe
   NearbyDevicesState reduce() {
     return state.copyWith(
       devices: {},
+    );
+  }
+}
+
+/// Registers or updates a device announced by the relay backend.
+class RegisterRelayDeviceAction extends AsyncReduxAction<NearbyDevicesService, NearbyDevicesState> {
+  final Device device;
+
+  RegisterRelayDeviceAction(this.device);
+
+  @override
+  bool get trackOrigin => false;
+
+  @override
+  Future<NearbyDevicesState> reduce() async {
+    return state.copyWith(
+      relayDevices: {...state.relayDevices, device.fingerprint: device},
+    );
+  }
+}
+
+/// Removes a relay device by fingerprint (e.g. the peer left the room).
+class UnregisterRelayDeviceAction extends ReduxAction<NearbyDevicesService, NearbyDevicesState> {
+  final String fingerprint;
+
+  UnregisterRelayDeviceAction(this.fingerprint);
+
+  @override
+  NearbyDevicesState reduce() {
+    return state.copyWith(
+      relayDevices: {...state.relayDevices}..remove(fingerprint),
+    );
+  }
+}
+
+/// Removes every device announced by the relay backend (relay disconnected).
+class ClearRelayDevicesAction extends ReduxAction<NearbyDevicesService, NearbyDevicesState> {
+  @override
+  NearbyDevicesState reduce() {
+    return state.copyWith(
+      relayDevices: {},
     );
   }
 }

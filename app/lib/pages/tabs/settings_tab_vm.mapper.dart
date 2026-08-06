@@ -52,6 +52,17 @@ class SettingsTabVmMapper extends ClassMapperBase<SettingsTabVm> {
       v.multicastController;
   static const Field<SettingsTabVm, TextEditingController>
   _f$multicastController = Field('multicastController', _$multicastController);
+  static TextEditingController _$relayServerUrlController(SettingsTabVm v) =>
+      v.relayServerUrlController;
+  static const Field<SettingsTabVm, TextEditingController>
+  _f$relayServerUrlController = Field(
+    'relayServerUrlController',
+    _$relayServerUrlController,
+  );
+  static TextEditingController _$relayRoomController(SettingsTabVm v) =>
+      v.relayRoomController;
+  static const Field<SettingsTabVm, TextEditingController>
+  _f$relayRoomController = Field('relayRoomController', _$relayRoomController);
   static SettingsState _$settings(SettingsTabVm v) => v.settings;
   static const Field<SettingsTabVm, SettingsState> _f$settings = Field(
     'settings',
@@ -189,6 +200,8 @@ class SettingsTabVmMapper extends ClassMapperBase<SettingsTabVm> {
     #portController: _f$portController,
     #timeoutController: _f$timeoutController,
     #multicastController: _f$multicastController,
+    #relayServerUrlController: _f$relayServerUrlController,
+    #relayRoomController: _f$relayRoomController,
     #settings: _f$settings,
     #serverState: _f$serverState,
     #deviceInfo: _f$deviceInfo,
@@ -217,6 +230,8 @@ class SettingsTabVmMapper extends ClassMapperBase<SettingsTabVm> {
       portController: data.dec(_f$portController),
       timeoutController: data.dec(_f$timeoutController),
       multicastController: data.dec(_f$multicastController),
+      relayServerUrlController: data.dec(_f$relayServerUrlController),
+      relayRoomController: data.dec(_f$relayRoomController),
       settings: data.dec(_f$settings),
       serverState: data.dec(_f$serverState),
       deviceInfo: data.dec(_f$deviceInfo),
@@ -310,6 +325,8 @@ abstract class SettingsTabVmCopyWith<$R, $In extends SettingsTabVm, $Out>
     TextEditingController? portController,
     TextEditingController? timeoutController,
     TextEditingController? multicastController,
+    TextEditingController? relayServerUrlController,
+    TextEditingController? relayRoomController,
     SettingsState? settings,
     ServerState? serverState,
     DeviceInfoResult? deviceInfo,
@@ -360,6 +377,8 @@ class _SettingsTabVmCopyWithImpl<$R, $Out>
     TextEditingController? portController,
     TextEditingController? timeoutController,
     TextEditingController? multicastController,
+    TextEditingController? relayServerUrlController,
+    TextEditingController? relayRoomController,
     SettingsState? settings,
     Object? serverState = $none,
     DeviceInfoResult? deviceInfo,
@@ -387,6 +406,10 @@ class _SettingsTabVmCopyWithImpl<$R, $Out>
       if (timeoutController != null) #timeoutController: timeoutController,
       if (multicastController != null)
         #multicastController: multicastController,
+      if (relayServerUrlController != null)
+        #relayServerUrlController: relayServerUrlController,
+      if (relayRoomController != null)
+        #relayRoomController: relayRoomController,
       if (settings != null) #settings: settings,
       if (serverState != $none) #serverState: serverState,
       if (deviceInfo != null) #deviceInfo: deviceInfo,
@@ -425,6 +448,14 @@ class _SettingsTabVmCopyWithImpl<$R, $Out>
     multicastController: data.get(
       #multicastController,
       or: $value.multicastController,
+    ),
+    relayServerUrlController: data.get(
+      #relayServerUrlController,
+      or: $value.relayServerUrlController,
+    ),
+    relayRoomController: data.get(
+      #relayRoomController,
+      or: $value.relayRoomController,
     ),
     settings: data.get(#settings, or: $value.settings),
     serverState: data.get(#serverState, or: $value.serverState),

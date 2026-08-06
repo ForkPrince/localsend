@@ -5,12 +5,14 @@ import 'package:localsend_isolates/constants.dart';
 import 'package:localsend_isolates/model/dto/multicast_dto.dart';
 import 'package:localsend_isolates/model/file_type.dart';
 import 'package:localsend_isolates/rust/api/model.dart' show FileDto;
+import 'package:localsend_isolates/rust/api/relay.dart';
 import 'package:localsend_isolates/rust/api/server.dart';
 import 'package:localsend_isolates/src/isolate/child/main.dart';
 import 'package:localsend_isolates/src/isolate/child/sync_provider.dart';
 import 'package:localsend_isolates/src/isolate/dto/send_to_isolate_data.dart';
 import 'package:localsend_isolates/src/task/server/file_saver.dart';
 import 'package:localsend_isolates/src/task/server/http_server.dart';
+import 'package:localsend_isolates/src/task/server/relay.dart';
 import 'package:localsend_isolates/util/future_queue.dart';
 import 'package:localsend_isolates/util/rust.dart';
 import 'package:logging/logging.dart';
@@ -42,11 +44,30 @@ class HttpServerStartTask implements BaseHttpServerTask {
   /// application instance request this one to show itself. `null` disables it.
   final String? showToken;
 
+  /// The relay configuration. `null` leaves the relay disabled.
+  /// When set, the server connects to the backend and serves peers' sessions.
+  final RelayConfig? relay;
+
   HttpServerStartTask({
     required this.pin,
     required this.verifyChecksums,
     required this.web,
     required this.showToken,
+    required this.relay,
+  });
+}
+
+/// Configuration for the optional relay connection.
+class RelayConfig {
+  /// The backend WebSocket URL, e.g. `wss://relay.example.org/v1/relay/ws`.
+  final String url;
+
+  /// The room secret shared with the devices to reach.
+  final String roomSecret;
+
+  RelayConfig({
+    required this.url,
+    required this.roomSecret,
   });
 }
 
@@ -335,6 +356,66 @@ class HttpServerShowEvent extends HttpServerEvent {
   });
 }
 
+/// Opens a relay session to the device [targetId] for every connection
+/// accepted on a local TCP listener and replies with the local address to dial
+/// on the [HttpServerRelayProxyReadyEvent].
+class HttpServerOpenRelayProxyTask implements BaseHttpServerTask {
+  final String targetId;
+
+  HttpServerOpenRelayProxyTask({
+    required this.targetId,
+  });
+}
+
+/// The local address to dial to send through the relay; emitted in reply to an
+/// [HttpServerOpenRelayProxyTask].
+class HttpServerRelayProxyReadyEvent extends HttpServerEvent {
+  final String address;
+
+  HttpServerRelayProxyReadyEvent({
+    required this.address,
+  });
+}
+
+/// The relay connection is established.
+class HttpServerRelayConnectedEvent extends HttpServerEvent {}
+
+/// A device joined the room, or is currently in the room (on connect).
+class HttpServerRelayPeerEvent extends HttpServerEvent {
+  final RsRelayPeer peer;
+
+  HttpServerRelayPeerEvent({
+    required this.peer,
+  });
+}
+
+/// A device updated its information.
+class HttpServerRelayPeerUpdateEvent extends HttpServerEvent {
+  final RsRelayPeer peer;
+
+  HttpServerRelayPeerUpdateEvent({
+    required this.peer,
+  });
+}
+
+/// A device left the room.
+class HttpServerRelayPeerLeftEvent extends HttpServerEvent {
+  final String peerId;
+
+  HttpServerRelayPeerLeftEvent({
+    required this.peerId,
+  });
+}
+
+/// The relay connection was lost.
+class HttpServerRelayDisconnectedEvent extends HttpServerEvent {
+  final String? error;
+
+  HttpServerRelayDisconnectedEvent({
+    required this.error,
+  });
+}
+
 class _ReceiveSession {
   final HttpServerReceiveConfig config;
 
@@ -433,6 +514,33 @@ Future<void> setupHttpServerIsolate(
                 data: data,
               ),
             );
+          }
+
+          // Start the optional relay: the server connects to the backend and
+          // automatically serves peers' sessions. Its events are drained
+          // concurrently on the same task stream.
+          final relay = startTask.relay;
+          if (relay != null) {
+            try {
+              final relayEvents = await ref
+                  .read(relayProvider)
+                  .start(
+                    url: relay.url,
+                    roomSecret: relay.roomSecret,
+                    info: RsRelayInfo(
+                      alias: syncState.alias,
+                      version: protocolVersion,
+                      deviceModel: syncState.deviceInfo.deviceModel,
+                      deviceType: syncState.deviceInfo.deviceType.toRust(),
+                      fingerprint: syncState.securityContext.certificateHash,
+                      certFingerprint: syncState.securityContext.certificateHash,
+                      download: syncState.download,
+                    ),
+                  );
+              unawaited(_drainRelayEvents(relayEvents, emit));
+            } catch (e) {
+              _logger.severe('Could not start the relay', e);
+            }
           }
 
           try {
@@ -542,6 +650,9 @@ Future<void> setupHttpServerIsolate(
           return;
         case HttpServerStopTask _:
           ref.read(_receiveSessionProvider).session = null;
+          // Stop the relay first so no new sessions are accepted while the
+          // server releases its port.
+          unawaited(ref.read(relayProvider).stop());
           await ref.read(httpServerProvider).stop();
           sendToMain(
             IsolateTaskStreamResult.done(
@@ -588,6 +699,24 @@ Future<void> setupHttpServerIsolate(
                 sessionId: failTask.sessionId,
                 fileId: failTask.fileId,
               );
+          return;
+        case HttpServerOpenRelayProxyTask proxyTask:
+          try {
+            final address = await ref.read(relayProvider).openProxy(targetId: proxyTask.targetId);
+            sendToMain(
+              IsolateTaskStreamResult.event(
+                id: task.id,
+                data: HttpServerRelayProxyReadyEvent(address: address),
+              ),
+            );
+          } catch (e) {
+            sendToMain(
+              IsolateTaskStreamResult.error(
+                id: task.id,
+                error: e.humanErrorMessage,
+              ),
+            );
+          }
           return;
       }
     },
@@ -716,5 +845,28 @@ Future<void> _handleFileUpload({
   } catch (e, st) {
     _logger.severe('Failed to post-process file', e, st);
     emitFailed(e);
+  }
+}
+
+/// Drains the relay event stream, forwarding every event to [emit] on the
+/// running server task stream. Returns when the relay is stopped or the
+/// connection is lost.
+Future<void> _drainRelayEvents(
+  Stream<RsRelayEvent> events,
+  void Function(HttpServerEvent) emit,
+) async {
+  await for (final event in events) {
+    switch (event) {
+      case RsRelayEvent_Connected():
+        emit(HttpServerRelayConnectedEvent());
+      case RsRelayEvent_Peer(:final peer):
+        emit(HttpServerRelayPeerEvent(peer: peer));
+      case RsRelayEvent_PeerUpdate(:final peer):
+        emit(HttpServerRelayPeerUpdateEvent(peer: peer));
+      case RsRelayEvent_PeerLeft(:final peerId):
+        emit(HttpServerRelayPeerLeftEvent(peerId: peerId));
+      case RsRelayEvent_Disconnected(:final error):
+        emit(HttpServerRelayDisconnectedEvent(error: error));
+    }
   }
 }
